@@ -33,9 +33,40 @@ Requires macOS 12.0 or later and the Xcode command-line tools (for `swiftc`).
 ./build.sh
 ```
 
-This compiles `main.swift` for both `arm64` and `x86_64`, merges them into a universal `YouTube.app` (runs natively on Apple Silicon and Intel), embeds the icon, and ad-hoc code-signs the bundle. To install it, drag `YouTube.app` into `/Applications`.
+This compiles `main.swift` for both `arm64` and `x86_64`, merges them into a universal `YouTube.app` (runs natively on Apple Silicon and Intel), embeds the icon, and code-signs the bundle. To install it, drag `YouTube.app` into `/Applications`.
 
-Because the app is ad-hoc signed, the first launch may be blocked by Gatekeeper — right-click the app and choose **Open** once to whitelist it.
+If a "Developer ID Application" certificate is in your keychain, `build.sh` signs with it (hardened runtime + secure timestamp); otherwise it falls back to an ad-hoc signature. Set `SIGN_ID` to pick a specific identity.
+
+A build you compiled yourself launches without complaint. Gatekeeper only objects to apps that arrive with a *quarantine* flag — i.e. downloaded from the web — and for those, a signature alone is not enough: the app must also be notarized.
+
+### Releasing a notarized build
+
+One-time setup, using an app-specific password generated at
+[account.apple.com](https://account.apple.com) → Sign-In and Security → App-Specific Passwords:
+
+```sh
+xcrun notarytool store-credentials notary \
+    --apple-id you@example.com --team-id YOURTEAMID
+```
+
+Your Team ID is the parenthesized suffix in `security find-identity -v -p codesigning`.
+
+Omitting `--password` makes it prompt, keeping the secret out of your shell history. It
+validates with Apple before saving, so a failure here means no profile was written — the
+Team ID must match the one that issued your signing certificate, and your team's Apple
+Developer Program License Agreement must be current (an outdated one returns HTTP 403).
+
+Then, per release:
+
+```sh
+./build.sh && ./notarize.sh
+```
+
+`notarize.sh` zips the bundle with `ditto` (plain `zip` discards the signature), submits it to Apple, waits for the result, staples the ticket to the `.app` so Gatekeeper clears it even offline, re-zips, and verifies with `spctl`. The resulting `YouTube-macos-<version>.zip` opens with a normal double-click on any Mac.
+
+An unsigned or merely ad-hoc-signed build, by contrast, is blocked on a downloaded copy with
+*"Apple could not verify YouTube is free of malware"* — which is why releases go through the
+step above rather than asking users to override Gatekeeper.
 
 ### Regenerating the icon
 
