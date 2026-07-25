@@ -19,7 +19,16 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>LSMinimumSystemVersion</key><string>$DEPLOYMENT_TARGET</string>
 </dict></plist>
 EOF
-swiftc -O -target "$(uname -m)-apple-macosx$DEPLOYMENT_TARGET" \
-    main.swift -o "$APP/Contents/MacOS/YouTube"
+# Compile each architecture, then merge into one universal binary.
+# -runtime-compatibility-version none skips the Swift back-deployment shims,
+# whose x86_64 slices the Command Line Tools don't ship (full Xcode does).
+BIN="$APP/Contents/MacOS/YouTube"
+for arch in arm64 x86_64; do
+    swiftc -O -target "$arch-apple-macosx$DEPLOYMENT_TARGET" \
+        -runtime-compatibility-version none \
+        main.swift -o "$BIN.$arch"
+done
+lipo -create -output "$BIN" "$BIN.arm64" "$BIN.x86_64"
+rm "$BIN.arm64" "$BIN.x86_64"
 codesign --force --sign - "$APP"
-echo "Built $APP"
+echo "Built $APP ($(lipo -archs "$BIN"))"

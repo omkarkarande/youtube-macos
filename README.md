@@ -33,7 +33,7 @@ Requires macOS 12.0 or later and the Xcode command-line tools (for `swiftc`).
 ./build.sh
 ```
 
-This compiles `main.swift`, assembles `YouTube.app`, embeds the icon, and ad-hoc code-signs the bundle. To install it, drag `YouTube.app` into `/Applications`.
+This compiles `main.swift` for both `arm64` and `x86_64`, merges them into a universal `YouTube.app` (runs natively on Apple Silicon and Intel), embeds the icon, and ad-hoc code-signs the bundle. To install it, drag `YouTube.app` into `/Applications`.
 
 Because the app is ad-hoc signed, the first launch may be blocked by Gatekeeper — right-click the app and choose **Open** once to whitelist it.
 
