@@ -68,7 +68,6 @@ let pageScript = """
     ::-webkit-scrollbar {display:none !important}
     html {scrollbar-width:none !important}
     /* let main content take the freed width */
-    ytd-app[mini-guide-visible] ytd-page-manager.ytd-app {margin-left:0 !important}
     ytd-page-manager.ytd-app {margin-left:0 !important}
   `;
   document.documentElement.appendChild(css);
@@ -117,12 +116,25 @@ let pageScript = """
        node.querySelector?.('ytd-masthead'));
   }
 
+  // Coalesce YouTube's heavy DOM churn: once an update is queued for this
+  // frame, skip re-inspecting further mutations until it runs.
+  let mastheadUpdateQueued = false;
+  function queueMastheadUpdate() {
+    if (mastheadUpdateQueued) return;
+    mastheadUpdateQueued = true;
+    requestAnimationFrame(() => {
+      mastheadUpdateQueued = false;
+      updateMasthead();
+    });
+  }
+
   updateMasthead();
   new MutationObserver(records => {
+    if (mastheadUpdateQueued) return;
     if (records.some(record =>
       touchesMasthead(record.target) ||
       Array.from(record.addedNodes).some(touchesMasthead))) {
-      updateMasthead();
+      queueMastheadUpdate();
     }
   }).observe(document.body, {childList: true, subtree: true});
 
