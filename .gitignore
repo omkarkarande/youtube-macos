@@ -1,4 +1,5 @@
 YouTube.app/
+*.zip
 build.log
 icon.iconset/
 icon_1024.png
