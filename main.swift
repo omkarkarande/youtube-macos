@@ -156,12 +156,18 @@ let pageScript = """
 
   const windowPlayerClass = 'youtube-window-player';
   function setWindowPlayer(active) {
-    document.documentElement.classList.toggle(windowPlayerClass, active);
+    const root = document.documentElement;
+    if (root.classList.contains(windowPlayerClass) === active) return; // no change
+    root.classList.toggle(windowPlayerClass, active);
     document.querySelectorAll('.ytp-fullscreen-button').forEach(button => {
       const label = active ? 'Exit full window' : 'Full window';
       button.setAttribute('aria-label', `${label} (f)`);
       button.setAttribute('data-title-no-tooltip', label);
     });
+    // The class flip resizes the player via CSS without notifying YouTube, so
+    // its control bar keeps the old width. Nudge a resize once layout settles
+    // so the player recomputes chrome sizing for the new dimensions.
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   }
   document.addEventListener('click', event => {
     const button = event.target.closest?.('.ytp-fullscreen-button');
@@ -209,8 +215,22 @@ func hideTrafficLights(_ window: NSWindow) {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKScriptMessageHandler {
+class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
     private static let dragMessageName = "drag"
+
+    // Hosts kept inside the app: YouTube itself plus the Google domains its
+    // sign-in, account, media, and asset flows rely on. Everything else is an
+    // external link and opens in the system browser.
+    private static let internalHostSuffixes = [
+        "youtube.com", "youtu.be", "youtubekids.com", "ytimg.com",
+        "google.com", "googleusercontent.com", "googlevideo.com",
+        "ggpht.com", "gstatic.com", "googleapis.com",
+    ]
+
+    private func isInternalHost(_ host: String?) -> Bool {
+        guard let host = host?.lowercased() else { return false }
+        return Self.internalHostSuffixes.contains { host == $0 || host.hasSuffix("." + $0) }
+    }
 
     var window: NSWindow!
     var webView: WKWebView!
@@ -225,6 +245,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKScriptMessag
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
+        webView.navigationDelegate = self
         webView.allowsBackForwardNavigationGestures = true
 
         window = NSWindow(
@@ -259,10 +280,40 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKScriptMessag
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // target=_blank links open in the same view instead of dying
+    // Route top-level navigations: keep YouTube/Google in-app, send external
+    // links to the system browser.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else { return decisionHandler(.allow) }
+        switch url.scheme?.lowercased() {
+        case "http", "https":
+            // Only hijack main-frame link targets; let subframes and new-window
+            // actions (handled in createWebViewWith) proceed normally.
+            if navigationAction.targetFrame?.isMainFrame == true, !isInternalHost(url.host) {
+                NSWorkspace.shared.open(url)
+                decisionHandler(.cancel)
+            } else {
+                decisionHandler(.allow)
+            }
+        case "blob", "data", "about", "javascript", nil:
+            decisionHandler(.allow)
+        default:
+            // mailto:, tel:, and other app schemes -> hand off to the OS.
+            NSWorkspace.shared.open(url)
+            decisionHandler(.cancel)
+        }
+    }
+
+    // target=_blank: YouTube/Google open in the same view; external -> browser.
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let url = navigationAction.request.url { webView.load(URLRequest(url: url)) }
+        if let url = navigationAction.request.url {
+            if isInternalHost(url.host) {
+                webView.load(URLRequest(url: url))
+            } else {
+                NSWorkspace.shared.open(url)
+            }
+        }
         return nil
     }
 
