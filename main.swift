@@ -35,33 +35,49 @@ let pageScript = """
     }
     html.youtube-window-player,
     html.youtube-window-player body {overflow:hidden !important}
-    html.youtube-window-player #masthead-container,
-    html.youtube-window-player ytd-watch-flexy > :not(#full-bleed-container) {
-      display:none !important;
-    }
+    html.youtube-window-player #masthead-container {display:none !important}
+    /* Hide the whole watch page but keep the player painted, wherever YouTube
+       hosts it. Using visibility (not display:none) means the player stays
+       visible even inside a hidden branch, and hidden branches never paint
+       over it. */
+    html.youtube-window-player ytd-watch-flexy {visibility:hidden !important}
+    html.youtube-window-player #movie_player {visibility:visible !important}
+    /* Neutralize ancestor transforms and height caps so the pinned player
+       anchors to the window and can't be collapsed at large window sizes. */
+    html.youtube-window-player ytd-watch-flexy,
     html.youtube-window-player #full-bleed-container,
-    html.youtube-window-player #player-full-bleed-container {
+    html.youtube-window-player #player-full-bleed-container,
+    html.youtube-window-player #columns,
+    html.youtube-window-player #primary,
+    html.youtube-window-player #primary-inner,
+    html.youtube-window-player #player,
+    html.youtube-window-player #player-container-outer,
+    html.youtube-window-player #player-container,
+    html.youtube-window-player ytd-player#ytd-player,
+    html.youtube-window-player ytd-player#ytd-player > #container {
+      transform:none !important;
       overflow:visible !important;
+      max-height:none !important;
     }
-    html.youtube-window-player #player-container {
+    /* Pin the player itself to the window, independent of which container
+       YouTube hosts it in or how it caps player height for a given size. */
+    html.youtube-window-player #movie_player {
       position:fixed !important; inset:0 !important;
       width:100vw !important; height:100vh !important;
+      max-width:none !important; max-height:none !important;
       z-index:2147483647 !important;
       background:#000 !important;
-    }
-    html.youtube-window-player ytd-player#ytd-player,
-    html.youtube-window-player ytd-player#ytd-player > #container,
-    html.youtube-window-player #movie_player,
-    html.youtube-window-player #movie_player .html5-video-container {
-      position:absolute !important; inset:0 !important;
-      width:100% !important; height:100% !important;
-      max-width:none !important; max-height:none !important;
       border-radius:0 !important;
     }
-    html.youtube-window-player #movie_player {background:#000 !important}
+    html.youtube-window-player #movie_player .html5-video-container,
     html.youtube-window-player #movie_player video.html5-main-video {
       position:absolute !important; inset:0 !important;
       width:100% !important; height:100% !important;
+      max-width:none !important; max-height:none !important;
+      transform:none !important;
+      border-radius:0 !important;
+    }
+    html.youtube-window-player #movie_player video.html5-main-video {
       object-fit:contain !important;
     }
     /* hide scrollbars, keep scrolling */
