@@ -33,6 +33,40 @@ let pageScript = """
       background:transparent !important;
       border:none !important; box-shadow:none !important;
     }
+    /* Keep YouTube's re-rendered masthead extras hidden. */
+    ytd-masthead button[aria-label="Ask YouTube"],
+    ytd-masthead yt-searchbox button[aria-label="Search"],
+    ytd-masthead #search-button-narrow,
+    ytd-masthead #voice-search-button,
+    ytd-masthead #ai-companion-button,
+    ytd-masthead #end ytd-button-renderer:has([aria-label="Upload"]),
+    ytd-masthead #end [aria-label="Upload"] {display:none !important}
+    ytd-masthead #youtube-history-button {
+      position:relative !important;
+      width:40px !important; height:40px !important;
+      margin:0 4px !important; padding:0 !important;
+      border-radius:50% !important;
+      border:0 !important; background:transparent !important;
+      cursor:pointer !important;
+    }
+    ytd-masthead #youtube-history-button:hover,
+    ytd-masthead #youtube-history-button:focus-visible {
+      background:rgba(0, 0, 0, .1) !important;
+    }
+    html[dark] ytd-masthead #youtube-history-button:hover,
+    html[dark] ytd-masthead #youtube-history-button:focus-visible {
+      background:rgba(255, 255, 255, .1) !important;
+    }
+    ytd-masthead #youtube-history-button::before {
+      content:"" !important;
+      position:absolute !important; inset:0 !important;
+      background-color:#0f0f0f !important;
+      -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm-1 2v6l5 3 .99-1.65L13 12V7h-2Z'/%3E%3C/svg%3E") center / 26.667px 26.667px no-repeat !important;
+      pointer-events:none !important;
+    }
+    html[dark] ytd-masthead #youtube-history-button::before {
+      background-color:#fff !important;
+    }
     html.youtube-window-player,
     html.youtube-window-player body {overflow:hidden !important}
     html.youtube-window-player #masthead-container {display:none !important}
@@ -97,8 +131,10 @@ let pageScript = """
       'ytd-masthead [aria-label*="Ask" i], ytd-masthead [title*="Ask" i],' +
       'ytd-masthead #search-icon-legacy, ytd-masthead yt-searchbox button[aria-label*="Search" i], ytd-masthead yt-searchbox .ytSearchboxComponentSearchIcon'
     ).forEach(el => {
-      const w = el.closest('ytd-topbar-menu-button-renderer, ytd-button-renderer, yt-icon-button, button') || el;
-      w.style.display = 'none';
+      const w = el.closest(
+        'ytd-topbar-menu-button-renderer, ytd-button-renderer, yt-button-view-model, button-view-model, yt-icon-button, button'
+      ) || el;
+      w.style.setProperty('display', 'none', 'important');
     });
   }
 
@@ -120,9 +156,23 @@ let pageScript = """
     masthead.appendChild(hitTarget);
   }
 
+  function ensureHistoryButton() {
+    const buttons = document.querySelector('ytd-masthead #buttons');
+    if (!buttons || buttons.querySelector('#youtube-history-button')) return;
+    const button = document.createElement('button');
+    button.id = 'youtube-history-button';
+    button.type = 'button';
+    button.title = 'History';
+    button.setAttribute('aria-label', 'History');
+    button.addEventListener('click', () => location.assign('/feed/history'));
+    const profile = buttons.querySelector('ytd-topbar-menu-button-renderer:has(#avatar-btn)');
+    buttons.insertBefore(button, profile || null);
+  }
+
   function updateMasthead() {
     hideButtons();
     ensureLogoHitTarget();
+    ensureHistoryButton();
   }
 
   function touchesMasthead(node) {
@@ -152,7 +202,12 @@ let pageScript = """
       Array.from(record.addedNodes).some(touchesMasthead))) {
       queueMastheadUpdate();
     }
-  }).observe(document.body, {childList: true, subtree: true});
+  }).observe(document.body, {
+    childList: true,
+    attributes: true,
+    attributeFilter: ['aria-label', 'title', 'href'],
+    subtree: true
+  });
 
   const windowPlayerClass = 'youtube-window-player';
   function setWindowPlayer(active) {

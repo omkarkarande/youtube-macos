@@ -8,6 +8,7 @@ A tiny, native macOS wrapper that turns YouTube into a focused desktop app. It's
 
 - **Chromeless, draggable window** — no traffic-light buttons, transparent titlebar, full-size content. Drag the window by any empty area of the masthead, just like a native title bar.
 - **Trimmed masthead** — the sidebar/guide, hamburger toggle, upload/create button, voice search, and "Ask" button are removed. The YouTube logo is pinned to the left edge (cropped to the play glyph) and the search bar is left-aligned for a cleaner top bar.
+- **History shortcut** — a clock button beside notifications opens YouTube's History page without restoring the sidebar.
 - **Edge-to-edge in-window player** — YouTube's fullscreen button is repurposed into a **Full window** mode that fills the app window with just the video (no OS fullscreen, no menu-bar hiding). Robust across any window size — the player stays pinned to the window regardless of how YouTube re-lays-out the page. Press the button again or hit **Esc** to exit; it also resets automatically when you navigate away.
 - **Stays logged in** — cookies persist in the default website data store, so you sign in once.
 - **Mouse & gesture navigation** — hardware back/forward mouse buttons (buttons 4/5) go back/forward in history, and two-finger swipe back/forward gestures are enabled.
