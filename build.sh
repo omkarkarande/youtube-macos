@@ -3,7 +3,7 @@ set -e
 cd "$(dirname "$0")"
 APP=YouTube.app
 DEPLOYMENT_TARGET=12.0
-VERSION=0.1
+VERSION=0.2
 
 # Signing identity. Set SIGN_ID to override; otherwise use the first
 # "Developer ID Application" cert in the keychain, falling back to ad-hoc.

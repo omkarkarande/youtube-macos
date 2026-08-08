@@ -11,7 +11,7 @@
 set -e
 cd "$(dirname "$0")"
 APP=YouTube.app
-VERSION=0.1
+VERSION=0.2
 PROFILE=${NOTARY_PROFILE:-notary}
 ZIP="YouTube-macos-$VERSION.zip"
 
